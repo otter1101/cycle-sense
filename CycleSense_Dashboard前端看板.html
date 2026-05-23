@@ -270,6 +270,7 @@ body {
 .empty-icon { font-size: 48px; margin-bottom: 16px; }
 .empty-text { font-size: 14px; color: var(--text-sub); text-align: center; }
 </style>
+<script src="language.js"></script>
 </head>
 <body>
 
@@ -748,16 +749,9 @@ function renderStatus(d) {
     // Range pin
     document.getElementById('rangePin').style.left = energy + '%';
     document.getElementById('rangePin').style.background = color;
-    // Today sentence (from language.js logic — pick by energy tier)
-    const sentences = {
-      high: ["状态在，不需要等更好的时机。","头脑清晰。手边的事可以放心展开。","精力是有的。用在哪里，你说了算。","你想做的那件事——今天是好时候。"],
-      medium: ["你一直知道怎么安排自己。今天也是。","清醒、平静。适合处理那些需要耐心的事。","你的时间表你做主。身体跟得上。"],
-      low: ["把最重要的一件事放在精力最好的那个小时里。","此刻的你适合做已经想清楚的事。","你知道今天的分寸在哪里。相信那个分寸。"],
-      veryLow: ["你还在这里，还在做。这本身需要被看到。","能推的事就推。不能推的事，用最小力气过关就好。"]
-    };
-    const tier = energy >= 75 ? 'high' : energy >= 50 ? 'medium' : energy >= 30 ? 'low' : 'veryLow';
-    const todayIdx = new Date().getDate() % sentences[tier].length;
-    document.getElementById('todaySentence').textContent = sentences[tier][todayIdx];
+    // Today sentence — from language.js
+    const lang = getTodayLanguage(energy, d.user_type || 'regular');
+    document.getElementById('todaySentence').textContent = lang.sentence;
     // Phase
     const phaseText = d.day_in_cycle ? `${d.phase_display} · Day ${d.day_in_cycle}` : d.phase_display || '当前状态';
     document.getElementById('phaseBadge').textContent = phaseText;
