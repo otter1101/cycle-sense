@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CycleSense</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --bg: #FBF8F4;
+  --card: #FFFFFF;
+  --text: #3D3537;
+  --text-sub: #8C7B7F;
+  --pink: #E8A0BF;
+  --pink-light: #F2C4D0;
+  --purple: #C88EA7;
+  --green: #7BC89B;
+  --blue: #7BB4D4;
+  --rose: #D4847B;
+  --gray: #C4BDB8;
+  --divider: rgba(61,53,55,0.06);
+}
+body {
+  font-family: 'Nunito', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+  display: flex;
+}
+/* Sidebar Nav */
+.sidebar {
+  position: fixed; left: 0; top: 0; bottom: 0; width: 220px;
+  background: var(--card); border-right: 1px solid var(--divider);
+  display: flex; flex-direction: column; padding: 32px 0; z-index: 100;
+}
+.sidebar-brand { font-size: 18px; font-weight: 700; color: var(--text); padding: 0 24px; margin-bottom: 36px; }
+.sidebar-brand span { color: var(--pink); }
+.nav-item {
+  display: flex; align-items: center; gap: 12px; padding: 14px 24px;
+  cursor: pointer; transition: all 0.2s; border-radius: 0 12px 12px 0; margin-right: 12px;
+  font-size: 14px; color: var(--text-sub);
+}
+.nav-item:hover { background: rgba(232,160,191,0.06); color: var(--text); }
+.nav-item.active { background: rgba(232,160,191,0.12); color: var(--pink); font-weight: 600; }
+.nav-item .icon { font-size: 18px; width: 24px; text-align: center; }
+.sidebar-footer { margin-top: auto; padding: 16px 24px; }
+.status-indicator { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-sub); }
+
+/* Main content */
+.main-content {
+  margin-left: 220px; flex: 1; padding: 40px 60px; max-width: 900px;
+}
+.page { display: none; animation: fadeIn 0.3s ease; }
+.page.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Hide old tab bar */
+.tab-bar { display: none; }
+
+/* Cards */
+.card {
+  background: var(--card); border-radius: 20px; padding: 20px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.04); margin-bottom: 16px;
+}
+
+/* Header */
+.page-header { margin-bottom: 32px; }
+.page-title { font-size: 24px; font-weight: 700; color: var(--text); }
+.page-subtitle { font-size: 14px; color: var(--text-sub); margin-top: 4px; }
+
+/* Desktop layout for status page */
+.status-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; align-items: start; }
+.status-left { display: flex; flex-direction: column; align-items: center; }
+.status-right { display: flex; flex-direction: column; gap: 16px; }
+
+/* Energy Ring */
+.ring-wrap { position: relative; width: 240px; height: 240px; }
+.ring-wrap svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.ring-bg { fill: none; stroke: rgba(0,0,0,0.04); stroke-width: 14; }
+.ring-progress { fill: none; stroke: var(--pink); stroke-width: 14; stroke-linecap: round; transition: stroke-dashoffset 1.5s ease-out, stroke 0.5s; }
+.ring-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; }
+.energy-num { font-size: 52px; font-weight: 700; color: var(--text); }
+.energy-pct { font-size: 22px; color: var(--text-sub); }
+.energy-label { font-size: 12px; color: var(--text-sub); margin-top: 2px; }
+
+/* Range meter */
+.range-meter { width: 240px; margin-top: 16px; }
+.range-bar { height: 10px; border-radius: 999px; background: linear-gradient(90deg, var(--rose) 0% 30%, #bd8740 30% 50%, var(--blue) 50% 75%, var(--green) 75% 100%); position: relative; }
+.range-pin { position: absolute; top: 50%; left: 76%; width: 16px; height: 16px; border: 3px solid #fff; border-radius: 50%; background: var(--green); box-shadow: 0 2px 6px rgba(0,0,0,0.15); transform: translate(-50%, -50%); transition: left 0.8s ease; }
+.range-labels { display: flex; justify-content: space-between; margin-top: 6px; font-size: 11px; color: var(--text-sub); font-weight: 600; }
+
+/* Today sentence */
+.today-sentence { margin-top: 16px; font-size: 15px; color: var(--text); text-align: center; max-width: 260px; line-height: 1.5; }
+
+/* Phase badge */
+.phase-badge {
+  display: inline-block; padding: 4px 12px; border-radius: 20px;
+  font-size: 13px; margin-top: 12px;
+  background: rgba(232,160,191,0.12); color: var(--pink);
+}
+.info-row { font-size: 14px; color: var(--text); margin-top: 6px; }
+.info-row.sub { font-size: 12px; color: var(--text-sub); }
+
+/* Strategy card */
+.strategy-title { font-size: 15px; font-weight: 500; margin-bottom: 14px; }
+.task-cols { display: flex; gap: 16px; }
+.task-col { flex: 1; }
+.task-col-title { font-size: 12px; font-weight: 600; margin-bottom: 8px; }
+.task-col-title.good { color: var(--green); }
+.task-col-title.avoid { color: var(--text-sub); }
+.task-pill {
+  display: inline-block; padding: 4px 10px; border-radius: 12px;
+  font-size: 12px; margin: 2px 4px 2px 0;
+}
+.task-pill.good { background: rgba(123,200,155,0.12); color: #4a9b6b; }
+.task-pill.avoid { background: rgba(140,123,127,0.08); color: var(--text-sub); }
+
+/* Confidence */
+.confidence-note { font-size: 11px; color: var(--purple); text-align: center; margin-top: 8px; }
+
+/* Period card */
+.period-card {
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--card); border-radius: 14px; padding: 14px 16px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+}
+.period-left { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-sub); }
+.period-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--rose); }
+.btn-period {
+  border: 1.5px solid rgba(212,132,123,0.5); background: none;
+  color: var(--rose); border-radius: 10px; padding: 8px 14px;
+  font-size: 13px; cursor: pointer; font-family: inherit; transition: all 0.2s;
+}
+.btn-period:hover { background: rgba(212,132,123,0.08); }
+.btn-period.done { border-color: var(--green); color: var(--green); cursor: default; }
+
+/* Measure page */
+.measure-center { display: flex; flex-direction: column; align-items: center; padding-top: 60px; }
+.pulse-ring {
+  width: 220px; height: 220px; border-radius: 50%;
+  border: 2px dashed rgba(232,160,191,0.3);
+  display: flex; align-items: center; justify-content: center;
+  position: relative;
+}
+.pulse-icon { font-size: 36px; animation: bob 2s ease-in-out infinite; }
+@keyframes bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+.measure-title { font-size: 16px; margin-top: 24px; text-align: center; }
+.measure-sub { font-size: 13px; color: var(--text-sub); margin-top: 6px; text-align: center; }
+
+.btn-start {
+  margin-top: 24px; width: 200px; height: 52px; border-radius: 26px;
+  background: linear-gradient(135deg, var(--pink), var(--pink-light));
+  color: white; font-size: 16px; font-weight: 600; border: none;
+  cursor: pointer; font-family: inherit; transition: all 0.2s;
+  box-shadow: 0 4px 16px rgba(232,160,191,0.3);
+}
+.btn-start:hover { transform: scale(1.03); box-shadow: 0 6px 20px rgba(232,160,191,0.4); }
+.btn-start:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+.measure-error { font-size: 13px; color: var(--rose); margin-top: 12px; text-align: center; display: none; }
+
+/* Measuring state */
+.measuring { display: none; flex-direction: column; align-items: center; padding-top: 40px; }
+.measuring.active { display: flex; }
+.pulse-anim {
+  width: 120px; height: 120px; border-radius: 50%; background: var(--pink);
+  animation: pulse 1s ease-in-out infinite; display: flex; align-items: center; justify-content: center;
+}
+@keyframes pulse { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.12); opacity: 0.85; } }
+.ripple { position: absolute; width: 120px; height: 120px; border-radius: 50%; border: 2px solid var(--pink); animation: rippleOut 2s linear infinite; opacity: 0; }
+.ripple:nth-child(2) { animation-delay: 0.6s; }
+.ripple:nth-child(3) { animation-delay: 1.2s; }
+@keyframes rippleOut { 0% { transform: scale(1); opacity: 0.4; } 100% { transform: scale(2.2); opacity: 0; } }
+.bpm { font-size: 22px; font-weight: 600; margin-top: 20px; }
+.progress-bar { width: 80%; height: 6px; border-radius: 3px; background: rgba(232,160,191,0.15); margin-top: 24px; overflow: hidden; }
+.progress-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--pink), var(--pink-light)); transition: width 1s linear; }
+.progress-text { font-size: 12px; color: var(--text-sub); margin-top: 8px; }
+.measure-hint { font-size: 13px; color: var(--text-sub); margin-top: 20px; }
+
+/* Complete */
+.complete { display: none; flex-direction: column; align-items: center; padding-top: 80px; }
+.complete.active { display: flex; }
+.check-circle {
+  width: 80px; height: 80px; border-radius: 50%; background: var(--green);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 36px; color: white; animation: popIn 0.4s cubic-bezier(0.68,-0.55,0.27,1.55);
+}
+@keyframes popIn { from { transform: scale(0); } to { transform: scale(1); } }
+
+/* Tips card */
+.tips-card { margin-top: 24px; }
+.tips-title { font-size: 12px; color: var(--purple); margin-bottom: 10px; }
+.tip-item { font-size: 13px; color: var(--text); opacity: 0.8; padding: 4px 0; padding-left: 14px; position: relative; }
+.tip-item::before { content: ''; position: absolute; left: 0; top: 11px; width: 6px; height: 6px; border-radius: 50%; background: var(--pink); }
+
+/* Trend page */
+.trend-summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+.summary-card { background: var(--card); border-radius: 16px; padding: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.04); text-align: center; }
+.summary-label { font-size: 12px; color: var(--text-sub); margin-bottom: 8px; }
+.summary-value { font-size: 32px; font-weight: 700; }
+.summary-unit { font-size: 14px; font-weight: 400; opacity: 0.6; }
+.summary-sub { font-size: 11px; color: var(--text-sub); margin-top: 4px; }
+.chart-card { padding: 24px; }
+.chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.chart-title { font-size: 15px; font-weight: 600; color: var(--text); }
+.chart-tabs { display: flex; gap: 4px; background: var(--bg); border-radius: 8px; padding: 3px; }
+.chart-tab { padding: 6px 14px; border-radius: 6px; font-size: 12px; color: var(--text-sub); cursor: pointer; transition: all 0.2s; }
+.chart-tab.active { background: white; color: var(--pink); font-weight: 600; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+.chart-container { position: relative; padding-left: 36px; }
+.trend-chart { width: 100%; height: 180px; display: block; }
+.chart-y-labels { position: absolute; left: 0; top: 0; height: 180px; display: flex; flex-direction: column; justify-content: space-between; font-size: 10px; color: var(--gray); }
+.chart-x-labels { display: flex; justify-content: space-between; margin-top: 12px; padding-left: 0; font-size: 11px; color: var(--text-sub); text-align: center; }
+.chart-x-labels small { font-size: 10px; color: var(--gray); }
+.day-list { display: flex; flex-direction: column; gap: 12px; }
+.day-item { display: grid; grid-template-columns: 90px 1fr 50px 80px; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--divider); }
+.day-item:last-child { border-bottom: none; }
+.day-date { font-size: 13px; color: var(--text); font-weight: 500; }
+.day-bar-wrap { height: 8px; background: rgba(0,0,0,0.04); border-radius: 4px; overflow: hidden; }
+.day-bar { height: 100%; border-radius: 4px; transition: width 0.8s ease-out; }
+.day-energy { font-size: 14px; font-weight: 700; text-align: right; }
+.day-phase { font-size: 11px; color: var(--text-sub); text-align: right; }
+
+/* Guide page */
+.guide-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.guide-card { min-height: 380px; display: flex; flex-direction: column; }
+.step-list { padding-left: 0; list-style: none; }
+.step-item { display: flex; gap: 12px; margin-bottom: 14px; }
+.step-num { width: 26px; height: 26px; border-radius: 50%; background: var(--pink); color: white; font-size: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px; }
+.step-content { font-size: 13px; }
+.step-content strong { font-size: 14px; }
+.step-sub { font-size: 12px; color: var(--text-sub); margin-top: 2px; }
+.code-block { background: var(--bg); border-left: 3px solid var(--pink); border-radius: 8px; padding: 10px 12px; font-family: monospace; font-size: 12px; margin-top: 8px; white-space: pre; overflow-x: auto; }
+.trigger-list { list-style: none; padding: 0; margin: 0; }
+.trigger-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--divider); }
+.trigger-item:last-child { border-bottom: none; }
+.trigger-phrase { font-size: 14px; color: var(--text); }
+.trigger-desc { font-size: 11px; color: var(--text-sub); }
+.claude-card-preview { background: var(--bg); border: 1px solid var(--divider); border-radius: 12px; padding: 16px; font-family: monospace; font-size: 11px; line-height: 1.7; white-space: pre-wrap; color: var(--text); overflow-x: auto; flex: 1; }
+
+/* Measure page layout */
+.measure-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; }
+.measure-left { display: flex; flex-direction: column; }
+.measure-right { display: flex; flex-direction: column; gap: 16px; }
+.setup-form { display: flex; flex-direction: column; gap: 12px; }
+.form-field { display: flex; flex-direction: column; gap: 4px; }
+.form-field label { font-size: 13px; font-weight: 600; color: var(--text); }
+.form-field select, .form-field input { width: 100%; height: 38px; border: 1px solid var(--divider); border-radius: 10px; padding: 0 12px; font-size: 13px; background: var(--bg); color: var(--text); }
+.form-field input[type="date"] { padding: 0 12px; }
+.checkbox-group { display: flex; flex-wrap: wrap; gap: 8px; }
+.checkbox-label { display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--text-sub); cursor: pointer; }
+.checkbox-label input { width: 14px; height: 14px; accent-color: var(--pink); }
+.btn-save { margin-top: 16px; width: 100%; height: 40px; border: none; border-radius: 10px; background: var(--pink); color: white; font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity 0.2s; }
+.btn-save:hover { opacity: 0.85; }
+.summary-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.summary-item { background: var(--bg); border-radius: 10px; padding: 12px; text-align: center; }
+.summary-label { font-size: 11px; color: var(--text-sub); display: block; }
+.summary-val { font-size: 22px; font-weight: 700; display: block; margin-top: 4px; }
+
+/* Setup page */
+.setup-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; }
+.setup-summary { display: flex; flex-direction: column; gap: 14px; }
+.setup-summary-item { display: flex; justify-content: space-between; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid var(--divider); }
+.setup-summary-item:last-child { border-bottom: none; }
+.setup-key { font-size: 13px; color: var(--text-sub); font-weight: 600; flex-shrink: 0; }
+.setup-value { font-size: 13px; color: var(--text); text-align: right; max-width: 60%; }
+
+/* Trend page placeholder */
+.empty-state { display: flex; flex-direction: column; align-items: center; padding-top: 80px; }
+.empty-icon { font-size: 48px; margin-bottom: 16px; }
+.empty-text { font-size: 14px; color: var(--text-sub); text-align: center; }
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<aside class="sidebar">
+  <div class="sidebar-brand">Cycle<span>Sense</span></div>
+  <div class="nav-item active" onclick="switchPage('status', this)"><span class="icon">📊</span>精力状态</div>
+  <div class="nav-item" onclick="switchPage('measure', this)"><span class="icon">💓</span>测量</div>
+  <div class="nav-item" onclick="switchPage('trend', this)"><span class="icon">📈</span>精力趋势</div>
+  <div class="nav-item" onclick="switchPage('guide', this)"><span class="icon">📖</span>使用指南</div>
+  <div class="nav-item" onclick="switchPage('setup', this)"><span class="icon">⚙️</span>个人设置</div>
+  <div class="sidebar-footer">
+    <div class="status-indicator">
+      <span class="status-dot" id="statusDot" style="width:8px;height:8px;border-radius:50%;background:var(--green);display:inline-block;"></span>
+      <span id="statusText">后端已连接</span>
+    </div>
+  </div>
+</aside>
+
+<!-- Main Content -->
+<main class="main-content">
+
+<!-- ===== 主页 ===== -->
+<div class="page active" id="page-status">
+  <div class="page-header">
+    <div class="page-title">今日精力</div>
+    <div class="page-subtitle" id="lastMeasured">加载中...</div>
+  </div>
+  <div class="status-grid">
+    <div class="status-left">
+      <div class="ring-wrap">
+        <svg viewBox="0 0 220 220">
+          <circle class="ring-bg" cx="110" cy="110" r="96"/>
+          <circle class="ring-progress" id="ringProgress" cx="110" cy="110" r="96" stroke-dasharray="603" stroke-dashoffset="603"/>
+        </svg>
+        <div class="ring-center">
+          <span class="energy-num" id="energyNum">—</span><span class="energy-pct" id="energyPct"></span>
+          <div class="energy-label">今日精力</div>
+        </div>
+      </div>
+      <!-- 精力区间条 -->
+      <div class="range-meter">
+        <div class="range-bar"><span class="range-pin" id="rangePin"></span></div>
+        <div class="range-labels"><span>照顾</span><span>放轻</span><span>平稳</span><span>充足</span></div>
+      </div>
+      <!-- 今日一句 -->
+      <div class="today-sentence" id="todaySentence">加载中...</div>
+      <span class="phase-badge" id="phaseBadge">加载中...</span>
+      <div class="info-row" id="cogState"></div>
+    </div>
+    <div class="status-right">
+      <div class="card" id="strategyCard">
+        <div class="strategy-title" id="coreStrategy">—</div>
+        <div class="task-cols">
+          <div class="task-col">
+            <div class="task-col-title good">✅ 适合</div>
+            <div id="suitableTasks"></div>
+          </div>
+          <div class="task-col">
+            <div class="task-col-title avoid">💤 避免</div>
+            <div id="avoidTasks"></div>
+          </div>
+        </div>
+      </div>
+      <div class="confidence-note" id="confNote" style="display:none;"></div>
+      <div class="period-card">
+        <div class="period-left"><span class="period-dot"></span>月经记录</div>
+        <button class="btn-period" id="btnPeriod" onclick="markPeriod()">今天来了</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 测量页 ===== -->
+<div class="page" id="page-measure">
+  <div class="page-header">
+    <div class="page-title">测量</div>
+    <div class="page-subtitle">手指放传感器 30 秒，完成精力采集</div>
+  </div>
+  <div class="measure-layout">
+    <!-- 左侧：测量区 -->
+    <div class="measure-left">
+      <div class="card" style="text-align:center;padding:32px 20px;">
+        <div id="measureWait" style="display:flex;flex-direction:column;align-items:center;">
+          <div class="pulse-ring"><span class="pulse-icon">💓</span></div>
+          <div class="measure-title">采集今天的身体信号</div>
+          <div class="measure-sub">手指轻轻放稳，保持安静 30 秒</div>
+          <button class="btn-start" id="btnStart" onclick="startMeasure()">开始测试</button>
+          <div class="measure-error" id="measureError">请确认手指已放在传感器上</div>
+          <div style="margin-top:20px;font-size:12px;color:var(--text-sub);line-height:1.8;text-align:left;max-width:300px;">
+            <p>💡 如果刚运动、刚喝咖啡或情绪还在起伏，先坐一会儿再测会更稳。</p>
+          </div>
+        </div>
+        <div class="measuring" id="measuring">
+          <div style="position:relative;display:flex;align-items:center;justify-content:center;">
+            <div class="ripple"></div><div class="ripple"></div><div class="ripple"></div>
+            <div class="pulse-anim">💓</div>
+          </div>
+          <div class="bpm" id="bpmDisplay">💓 — BPM</div>
+          <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+          <div class="progress-text" id="progressText">0 / 30 秒</div>
+          <div class="measure-hint">保持放松，不要移动手指 🤫</div>
+        </div>
+        <div class="complete" id="measureDone">
+          <div class="check-circle">✓</div>
+          <div style="font-size:18px;font-weight:600;margin-top:20px;">采集完成 ✨</div>
+          <div style="font-size:13px;color:var(--text-sub);margin-top:8px;">精力值已更新</div>
+          <div style="margin-top:16px;font-size:14px;color:var(--pink);cursor:pointer;" onclick="switchPage('status', document.querySelector('.nav-item'))">查看结果 →</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 右侧：摘要 -->
+    <div class="measure-right">
+      <!-- 本次采集摘要 -->
+      <div class="card">
+        <div style="font-size:15px;font-weight:600;margin-bottom:12px;">本次采集摘要</div>
+        <div class="summary-row">
+          <div class="summary-item"><span class="summary-label">心跳</span><span class="summary-val" id="summaryBpm">—</span></div>
+          <div class="summary-item"><span class="summary-label">恢复力</span><span class="summary-val" id="summaryRestore">—</span></div>
+          <div class="summary-item"><span class="summary-label">今日余量</span><span class="summary-val" id="summaryEnergy">—</span></div>
+          <div class="summary-item"><span class="summary-label">连续记录</span><span class="summary-val" id="summaryDays">—</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 趋势页 ===== -->
+<div class="page" id="page-trend">
+  <div class="page-header">
+    <div class="page-title">精力趋势</div>
+    <div class="page-subtitle">最近 7 天的精力变化</div>
+  </div>
+
+  <!-- 统计摘要 -->
+  <div class="trend-summary">
+    <div class="summary-card">
+      <div class="summary-label">平均精力</div>
+      <div class="summary-value" style="color:var(--blue);">62<span class="summary-unit">%</span></div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-label">最高日</div>
+      <div class="summary-value" style="color:var(--green);">85<span class="summary-unit">%</span></div>
+      <div class="summary-sub">周三 · 卵泡期</div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-label">最低日</div>
+      <div class="summary-value" style="color:var(--rose);">35<span class="summary-unit">%</span></div>
+      <div class="summary-sub">周日 · 黄体晚期</div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-label">本周测量</div>
+      <div class="summary-value" style="color:var(--pink);">7<span class="summary-unit">次</span></div>
+      <div class="summary-sub">连续7天 ✨</div>
+    </div>
+  </div>
+
+  <!-- 折线图 -->
+  <div class="card chart-card">
+    <div class="chart-header">
+      <span class="chart-title">精力值走势</span>
+      <div class="chart-tabs">
+        <span class="chart-tab active">7天</span>
+        <span class="chart-tab">14天</span>
+      </div>
+    </div>
+    <div class="chart-container">
+      <svg class="trend-chart" viewBox="0 0 600 200" preserveAspectRatio="none">
+        <!-- Grid lines -->
+        <line x1="0" y1="50" x2="600" y2="50" stroke="rgba(61,53,55,0.06)" stroke-width="1"/>
+        <line x1="0" y1="100" x2="600" y2="100" stroke="rgba(61,53,55,0.06)" stroke-width="1"/>
+        <line x1="0" y1="150" x2="600" y2="150" stroke="rgba(61,53,55,0.06)" stroke-width="1"/>
+        <!-- Area fill -->
+        <path d="M0,130 L100,100 L200,70 L300,30 L400,80 L500,110 L600,130 L600,200 L0,200 Z" fill="url(#pinkGradient)" opacity="0.3"/>
+        <!-- Line -->
+        <polyline points="0,130 100,100 200,70 300,30 400,80 500,110 600,130" fill="none" stroke="#E8A0BF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        <!-- Data points -->
+        <circle cx="0" cy="130" r="6" fill="white" stroke="#D4847B" stroke-width="2.5"/>
+        <circle cx="100" cy="100" r="6" fill="white" stroke="#7BB4D4" stroke-width="2.5"/>
+        <circle cx="200" cy="70" r="6" fill="white" stroke="#7BB4D4" stroke-width="2.5"/>
+        <circle cx="300" cy="30" r="6" fill="white" stroke="#7BC89B" stroke-width="2.5"/>
+        <circle cx="400" cy="80" r="6" fill="white" stroke="#7BB4D4" stroke-width="2.5"/>
+        <circle cx="500" cy="110" r="6" fill="white" stroke="#E8A0BF" stroke-width="2.5"/>
+        <circle cx="600" cy="130" r="6" fill="white" stroke="#D4847B" stroke-width="2.5"/>
+        <defs>
+          <linearGradient id="pinkGradient" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#E8A0BF" stop-opacity="0.4"/>
+            <stop offset="100%" stop-color="#E8A0BF" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+      </svg>
+      <!-- Y axis labels -->
+      <div class="chart-y-labels">
+        <span>100</span><span>75</span><span>50</span><span>25</span>
+      </div>
+      <!-- X axis labels -->
+      <div class="chart-x-labels">
+        <span>5/17<br><small>周六</small></span>
+        <span>5/18<br><small>周日</small></span>
+        <span>5/19<br><small>周一</small></span>
+        <span>5/20<br><small>周二</small></span>
+        <span>5/21<br><small>周三</small></span>
+        <span>5/22<br><small>周四</small></span>
+        <span>5/23<br><small>周五</small></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 每日详情 -->
+  <div class="card">
+    <div class="chart-title" style="margin-bottom:16px;">每日详情</div>
+    <div class="day-list">
+      <div class="day-item">
+        <div class="day-date">5/23 周五</div>
+        <div class="day-bar-wrap"><div class="day-bar" style="width:35%;background:var(--rose);"></div></div>
+        <div class="day-energy" style="color:var(--rose);">35%</div>
+        <div class="day-phase">黄体晚期</div>
+      </div>
+      <div class="day-item">
+        <div class="day-date">5/22 周四</div>
+        <div class="day-bar-wrap"><div class="day-bar" style="width:45%;background:var(--pink);"></div></div>
+        <div class="day-energy" style="color:var(--pink);">45%</div>
+        <div class="day-phase">黄体晚期</div>
+      </div>
+      <div class="day-item">
+        <div class="day-date">5/21 周三</div>
+        <div class="day-bar-wrap"><div class="day-bar" style="width:60%;background:var(--blue);"></div></div>
+        <div class="day-energy" style="color:var(--blue);">60%</div>
+        <div class="day-phase">黄体前期</div>
+      </div>
+      <div class="day-item">
+        <div class="day-date">5/20 周二</div>
+        <div class="day-bar-wrap"><div class="day-bar" style="width:85%;background:var(--green);"></div></div>
+        <div class="day-energy" style="color:var(--green);">85%</div>
+        <div class="day-phase">排卵期</div>
+      </div>
+      <div class="day-item">
+        <div class="day-date">5/19 周一</div>
+        <div class="day-bar-wrap"><div class="day-bar" style="width:65%;background:var(--blue);"></div></div>
+        <div class="day-energy" style="color:var(--blue);">65%</div>
+        <div class="day-phase">卵泡期</div>
+      </div>
+      <div class="day-item">
+        <div class="day-date">5/18 周日</div>
+        <div class="day-bar-wrap"><div class="day-bar" style="width:50%;background:var(--blue);"></div></div>
+        <div class="day-energy" style="color:var(--blue);">50%</div>
+        <div class="day-phase">卵泡期</div>
+      </div>
+      <div class="day-item">
+        <div class="day-date">5/17 周六</div>
+        <div class="day-bar-wrap"><div class="day-bar" style="width:35%;background:var(--rose);"></div></div>
+        <div class="day-energy" style="color:var(--rose);">35%</div>
+        <div class="day-phase">月经期</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 指南页 ===== -->
+<div class="page" id="page-guide">
+  <div class="page-header">
+    <div class="page-title">使用指南</div>
+    <div class="page-subtitle">配置 AI 并开始使用</div>
+  </div>
+
+  <div class="guide-grid">
+    <!-- 左上：配置步骤 -->
+    <div class="card guide-card">
+      <div style="font-size:15px;font-weight:600;margin-bottom:4px;">配置步骤</div>
+      <div style="font-size:12px;color:var(--text-sub);margin-bottom:14px;">配置一次，以后正常聊天就可以。</div>
+      <div class="step-list">
+        <div class="step-item"><span class="step-num">1</span><div class="step-content"><strong>启动 CycleSense</strong><div class="step-sub">打开本地服务，让看板能读到今天的数据。</div><div class="code-block">cyclesense start</div></div></div>
+        <div class="step-item"><span class="step-num">2</span><div class="step-content"><strong>连接采集设备</strong><div class="step-sub">设备通电后自动上报。</div></div></div>
+        <div class="step-item"><span class="step-num">3</span><div class="step-content"><strong>把 CycleSense 加到 Claude</strong><div class="step-sub">在 Claude Desktop 配置里加入这段：</div><div class="code-block">"cyclesense": {
+  "command": "cyclesense",
+  "args": ["mcp"]
+}</div></div></div>
+        <div class="step-item"><span class="step-num">4</span><div class="step-content"><strong>重启 Claude，说"今天状态"</strong><div class="step-sub">AI 会显示你的状态卡。</div></div></div>
+      </div>
+    </div>
+
+    <!-- 右上：试试对AI说这些 -->
+    <div class="card guide-card">
+      <div style="font-size:15px;font-weight:600;margin-bottom:4px;">试试对 AI 说这些</div>
+      <div style="font-size:12px;color:var(--text-sub);margin-bottom:14px;">越像平常说话越好，不需要懂术语。</div>
+      <ul class="trigger-list">
+        <li class="trigger-item"><span class="trigger-phrase">"今天状态"</span><span class="trigger-desc">先看状态卡</span></li>
+        <li class="trigger-item"><span class="trigger-phrase">"帮我把今天安排轻一点"</span><span class="trigger-desc">按余量排任务</span></li>
+        <li class="trigger-item"><span class="trigger-phrase">"精力卡片"</span><span class="trigger-desc">查看今日精力签</span></li>
+        <li class="trigger-item"><span class="trigger-phrase">"今天适合谈那件重要的事吗？"</span><span class="trigger-desc">看沟通时机</span></li>
+        <li class="trigger-item"><span class="trigger-phrase">"今天来月经了"</span><span class="trigger-desc">更新周期记录</span></li>
+        <li class="trigger-item"><span class="trigger-phrase">"上次什么方法有效？"</span><span class="trigger-desc">查历史策略</span></li>
+      </ul>
+    </div>
+
+    <!-- 左下：精力卡片 -->
+    <div class="card guide-card">
+      <div style="font-size:15px;font-weight:600;margin-bottom:4px;">精力卡片</div>
+      <div style="font-size:12px;color:var(--text-sub);margin-bottom:14px;">在 Claude 里对话时显示。</div>
+      <pre class="claude-card-preview" id="claudeCardPreview">────── CycleSense 今日状态卡 ──────
+身体余量：76%
+当前状态：余量很好
+今天节奏：适合轻松推进
+
+今日关键词：清醒
+
+今天的身体像一张铺好的纸。
+想写什么都可以。
+
+适合今天：说清楚一件事、整理计划、做一个小决定
+可以放一放：硬扛到深夜、一次塞太多事
+────── 数据来自本地 CycleSense ──────</pre>
+    </div>
+
+    <!-- 右下：你可能想知道 -->
+    <div class="card guide-card">
+      <div style="font-size:15px;font-weight:600;margin-bottom:4px;">你可能想知道</div>
+      <div style="font-size:12px;color:var(--text-sub);margin-bottom:14px;">把容易焦虑的问题说清楚。</div>
+      <div style="font-size:13px;color:var(--text-sub);line-height:1.8;">
+        <p><strong style="color:var(--text);">年龄和经期必须填吗？</strong><br>不是。填了会更贴近你的身体节奏，不想填也可以只看今日余量。</p>
+        <p style="margin-top:12px;"><strong style="color:var(--text);">精力低会不会被评价？</strong><br>不会。AI只会帮你调整安排，不会说你不够好。</p>
+        <p style="margin-top:12px;"><strong style="color:var(--text);">数据安全吗？</strong><br>所有数据在你电脑本地，不上传任何云端。</p>
+        <p style="margin-top:12px;"><strong style="color:var(--text);">后端需要一直开着吗？</strong><br>是的。关闭后AI无法获取你的状态。下次用 cyclesense start 启动。</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 设置页 ===== -->
+<div class="page" id="page-setup">
+  <div class="page-header">
+    <div class="page-title">个人设置</div>
+    <div class="page-subtitle">让 CycleSense 更了解你的身体节奏</div>
+  </div>
+  <div class="setup-layout">
+    <!-- 左：表单 -->
+    <div class="card" style="padding:28px;">
+      <div style="font-size:16px;font-weight:700;margin-bottom:6px;">基本信息</div>
+      <div style="font-size:12px;color:var(--text-sub);margin-bottom:20px;">带 * 的为必填，其余可跳过。</div>
+      <div class="setup-form">
+        <div class="form-field">
+          <label>年龄段 *</label>
+          <select id="setupAge">
+            <option value="12-18">12-18 岁</option>
+            <option value="18-28">18-28 岁</option>
+            <option value="28-36">28-36 岁</option>
+            <option value="36-45">36-45 岁</option>
+            <option value="45+" selected>45 岁以上</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label>月经模式 *</label>
+          <select id="setupPattern">
+            <option value="regular">基本规律</option>
+            <option value="somewhat_irregular">有点不规律</option>
+            <option value="very_irregular">非常不规律</option>
+            <option value="changing" selected>变得不一样了</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label>身体感受（可多选）</label>
+          <div class="checkbox-group">
+            <label class="checkbox-label"><input type="checkbox" name="symptom" value="热醒/出汗" checked> 热醒/出汗</label>
+            <label class="checkbox-label"><input type="checkbox" name="symptom" value="心跳加速"> 心跳加速</label>
+            <label class="checkbox-label"><input type="checkbox" name="symptom" value="忘事/注意力" checked> 忘事/注意力</label>
+            <label class="checkbox-label"><input type="checkbox" name="symptom" value="情绪波动" checked> 情绪波动</label>
+          </div>
+        </div>
+        <div class="form-field">
+          <label>末次月经日期（可选）</label>
+          <input type="date" id="setupLastPeriod" value="2026-05-04">
+        </div>
+        <div class="form-field">
+          <label>平均周期天数（可选，21-90）</label>
+          <input type="number" id="setupCycleLength" min="21" max="90" value="32" placeholder="默认 28">
+        </div>
+      </div>
+      <button class="btn-save" id="btnSetup" onclick="submitSetup()">完成设置</button>
+    </div>
+
+    <!-- 右：设置摘要（demo展示用） -->
+    <div class="card" style="padding:28px;">
+      <div style="font-size:16px;font-weight:700;margin-bottom:6px;">当前配置摘要</div>
+      <div style="font-size:12px;color:var(--text-sub);margin-bottom:20px;">以下是你已填写的信息，AI 会据此调整策略。</div>
+      <div class="setup-summary" id="setupSummary">
+        <div class="setup-summary-item"><span class="setup-key">年龄段</span><span class="setup-value" id="sumAge">45+</span></div>
+        <div class="setup-summary-item"><span class="setup-key">月经模式</span><span class="setup-value" id="sumPattern">变得不一样了</span></div>
+        <div class="setup-summary-item"><span class="setup-key">身体感受</span><span class="setup-value" id="sumSymptoms">热醒/出汗、忘事/注意力、情绪波动</span></div>
+        <div class="setup-summary-item"><span class="setup-key">末次月经</span><span class="setup-value" id="sumLastPeriod">2026-05-04</span></div>
+        <div class="setup-summary-item"><span class="setup-key">周期天数</span><span class="setup-value" id="sumCycle">32 天</span></div>
+        <div class="setup-summary-item"><span class="setup-key">用户类型</span><span class="setup-value" id="sumUserType" style="color:var(--pink);font-weight:700;">围绝经期</span></div>
+      </div>
+      <div style="margin-top:20px;padding:14px;border-radius:12px;background:rgba(123,200,155,0.1);border:1px solid rgba(123,200,155,0.2);">
+        <div style="font-size:13px;color:#39744f;font-weight:600;">✓ 设置已完成</div>
+        <div style="font-size:12px;color:var(--text-sub);margin-top:4px;">AI 已根据你的信息自动判定用户类型，并调整推算模式。</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- end main -->
+</main>
+
+<script>
+const API = 'http://172.20.10.2:8000';
+const CIRCUM = 2 * Math.PI * 96; // ~603
+
+function switchPage(name, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(t => t.classList.remove('active'));
+  if (el) el.classList.add('active');
+}
+
+function getEnergyColor(e) {
+  if (e === null || e === undefined) return 'var(--gray)';
+  if (e >= 75) return 'var(--green)';
+  if (e >= 50) return 'var(--blue)';
+  if (e >= 30) return 'var(--pink)';
+  return 'var(--rose)';
+}
+
+async function fetchStatus() {
+  try {
+    const res = await fetch(API + '/api/status');
+    const json = await res.json();
+    document.getElementById('statusDot').style.background = 'var(--green)';
+    document.getElementById('statusText').textContent = '后端已连接';
+    if (json.status === 'error') {
+      if (json.code === 'NOT_CONFIGURED') {
+        switchPage('setup', document.querySelectorAll('.nav-item')[4]);
+        return;
+      }
+      document.getElementById('energyNum').textContent = '?';
+      document.getElementById('energyPct').textContent = '';
+      document.getElementById('phaseBadge').textContent = json.message || '请先完成设置';
+      return;
+    }
+    const d = json.data;
+    renderStatus(d);
+  } catch(e) {
+    // 后端未连接——显示等待状态
+    document.getElementById('statusDot').style.background = 'var(--rose)';
+    document.getElementById('statusText').textContent = '未连接后端';
+    document.getElementById('energyNum').textContent = '—';
+    document.getElementById('energyPct').textContent = '';
+    document.getElementById('phaseBadge').textContent = '等待后端连接...';
+    document.getElementById('lastMeasured').textContent = '请确保 cyclesense start 已运行';
+    document.getElementById('todaySentence').textContent = '';
+    document.getElementById('rangePin').style.left = '50%';
+    document.getElementById('rangePin').style.background = 'var(--gray)';
+  }
+}
+
+function renderStatus(d) {
+    const energy = d.energy;
+    const color = getEnergyColor(energy);
+    const offset = energy !== null ? CIRCUM * (1 - energy / 100) : CIRCUM;
+    const ring = document.getElementById('ringProgress');
+    ring.style.strokeDashoffset = offset;
+    ring.style.stroke = color;
+    if (energy === null) {
+      document.getElementById('energyNum').textContent = '—';
+      document.getElementById('energyPct').textContent = '';
+      document.getElementById('phaseBadge').textContent = '请先完成首次测量';
+      document.getElementById('cogState').textContent = '';
+      document.getElementById('lastMeasured').textContent = '手指放传感器 30 秒即可';
+      document.getElementById('todaySentence').textContent = '';
+      document.getElementById('rangePin').style.left = '50%';
+      document.getElementById('rangePin').style.background = 'var(--gray)';
+      return;
+    }
+    document.getElementById('energyNum').textContent = energy;
+    document.getElementById('energyPct').textContent = '%';
+    // Range pin
+    document.getElementById('rangePin').style.left = energy + '%';
+    document.getElementById('rangePin').style.background = color;
+    // Today sentence (from language.js logic — pick by energy tier)
+    const sentences = {
+      high: ["状态在，不需要等更好的时机。","头脑清晰。手边的事可以放心展开。","精力是有的。用在哪里，你说了算。","你想做的那件事——今天是好时候。"],
+      medium: ["你一直知道怎么安排自己。今天也是。","清醒、平静。适合处理那些需要耐心的事。","你的时间表你做主。身体跟得上。"],
+      low: ["把最重要的一件事放在精力最好的那个小时里。","此刻的你适合做已经想清楚的事。","你知道今天的分寸在哪里。相信那个分寸。"],
+      veryLow: ["你还在这里，还在做。这本身需要被看到。","能推的事就推。不能推的事，用最小力气过关就好。"]
+    };
+    const tier = energy >= 75 ? 'high' : energy >= 50 ? 'medium' : energy >= 30 ? 'low' : 'veryLow';
+    const todayIdx = new Date().getDate() % sentences[tier].length;
+    document.getElementById('todaySentence').textContent = sentences[tier][todayIdx];
+    // Phase
+    const phaseText = d.day_in_cycle ? `${d.phase_display} · Day ${d.day_in_cycle}` : d.phase_display || '当前状态';
+    document.getElementById('phaseBadge').textContent = phaseText;
+    document.getElementById('cogState').textContent = d.cognitive_state || '';
+    document.getElementById('lastMeasured').textContent = d.last_measured_ago ? `上次测量：${d.last_measured_ago}` : '';
+    document.getElementById('coreStrategy').textContent = d.recommendations?.core_strategy || '';
+    const st = document.getElementById('suitableTasks');
+    st.innerHTML = (d.recommendations?.suitable_tasks || []).map(t => `<span class="task-pill good">${t}</span>`).join('');
+    const at = document.getElementById('avoidTasks');
+    at.innerHTML = (d.recommendations?.avoid_tasks || []).map(t => `<span class="task-pill avoid">${t}</span>`).join('');
+    // Confidence & noise
+    const cn = document.getElementById('confNote');
+    let notes = [];
+    if (d.confidence === 'medium') notes.push('💫 数据仅供参考');
+    else if (d.confidence === 'low') notes.push('🌙 数据极少，请先完成测量');
+    if (d.noise_likelihood === 'high') notes.push('⚠️ 本次数据可能受运动/应激等非周期因素干扰');
+    if (d.cycle_related_confidence === 'low') notes.push('📊 本次RMSSD变化与周期关联度较低');
+    if (notes.length > 0) { cn.innerHTML = notes.join('<br>'); cn.style.display = 'block'; }
+    else { cn.style.display = 'none'; }
+}
+
+// Measure
+let measureTimer = null;
+let measureSec = 0;
+
+async function startMeasure() {
+  const btn = document.getElementById('btnStart');
+  const err = document.getElementById('measureError');
+  btn.disabled = true;
+  btn.textContent = '正在连接传感器...';
+  err.style.display = 'none';
+  try { await fetch(API + '/api/start-test', { method: 'POST' }); } catch(e) {}
+  // Poll for data
+  let attempts = 0;
+  const poll = setInterval(async () => {
+    attempts++;
+    try {
+      const res = await fetch(API + '/api/status');
+      const json = await res.json();
+      if (json.status === 'ok' && json.data?.last_measured_ago === '刚刚') {
+        clearInterval(poll);
+        startMeasuring(json.data.hrv?.current ? Math.round(60000 / (json.data.hrv.current || 72)) : 72);
+      }
+    } catch(e) {}
+    if (attempts > 3) {
+      clearInterval(poll);
+      // Simulate for demo
+      startMeasuring(72);
+    }
+  }, 3000);
+}
+
+function startMeasuring(bpm) {
+  document.getElementById('measureWait').style.display = 'none';
+  document.getElementById('measuring').classList.add('active');
+  document.getElementById('bpmDisplay').textContent = `💓 ${bpm || 72} BPM`;
+  document.getElementById('summaryBpm').textContent = bpm || 72;
+  measureSec = 0;
+  const fill = document.getElementById('progressFill');
+  const text = document.getElementById('progressText');
+  measureTimer = setInterval(() => {
+    measureSec++;
+    fill.style.width = (measureSec / 30 * 100) + '%';
+    text.textContent = `${measureSec} / 30 秒`;
+    // Update summary in real-time during measurement
+    const simBpm = 69 + Math.round(Math.sin(measureSec / 3) * 3);
+    document.getElementById('summaryBpm').textContent = simBpm;
+    document.getElementById('bpmDisplay').textContent = `💓 ${simBpm} BPM`;
+    if (measureSec >= 30) {
+      clearInterval(measureTimer);
+      document.getElementById('summaryBpm').textContent = '71';
+      document.getElementById('summaryRestore').textContent = '58.6';
+      document.getElementById('summaryEnergy').textContent = '76%';
+      document.getElementById('summaryDays').textContent = '14';
+      finishMeasure();
+    }
+  }, 1000);
+}
+
+function finishMeasure() {
+  document.getElementById('measuring').classList.remove('active');
+  document.getElementById('measureDone').classList.add('active');
+  setTimeout(() => {
+    document.getElementById('measureDone').classList.remove('active');
+    document.getElementById('measureWait').style.display = 'flex';
+    document.getElementById('btnStart').disabled = false;
+    document.getElementById('btnStart').textContent = '开始测试';
+    switchPage('status', document.querySelector('.nav-item'));
+    fetchStatus();
+  }, 3000);
+}
+
+async function markPeriod() {
+  try {
+    await fetch(API + '/api/mark_period', { method: 'POST' });
+    const btn = document.getElementById('btnPeriod');
+    btn.textContent = '✓ 已标记';
+    btn.classList.add('done');
+    btn.disabled = true;
+  } catch(e) {}
+}
+
+async function submitSetup() {
+  const age = document.getElementById('setupAge').value;
+  const pattern = document.getElementById('setupPattern').value;
+  const symptoms = Array.from(document.querySelectorAll('input[name="symptom"]:checked')).map(c => c.value);
+  const lastPeriod = document.getElementById('setupLastPeriod').value || null;
+  const cycleLength = parseInt(document.getElementById('setupCycleLength').value) || 28;
+  const body = { age_group: age, period_pattern: pattern, symptoms, last_period: lastPeriod, cycle_length: cycleLength, comm_style: "warm", push_sensitivity: "medium" };
+  try { await fetch(API + '/api/setup', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) }); } catch(e) {}
+  document.getElementById('sumAge').textContent = age;
+  document.getElementById('sumPattern').textContent = document.getElementById('setupPattern').selectedOptions[0].textContent;
+  document.getElementById('sumSymptoms').textContent = symptoms.join('、') || '无';
+  document.getElementById('sumLastPeriod').textContent = lastPeriod || '未填写';
+  document.getElementById('sumCycle').textContent = cycleLength + ' 天';
+  const isChanging = pattern === 'changing';
+  const hasSymptoms = symptoms.length >= 2;
+  let userType = '正常周期';
+  if ((age === '45+' && (isChanging || hasSymptoms)) || (age === '36-45' && isChanging && hasSymptoms)) userType = '围绝经期';
+  else if (pattern === 'very_irregular') userType = 'PCOS';
+  else if (pattern === 'somewhat_irregular') userType = '不太规律';
+  document.getElementById('sumUserType').textContent = userType;
+  const btn = document.getElementById('btnSetup');
+  btn.textContent = '✓ 设置已保存';
+  btn.style.background = 'var(--green)';
+  setTimeout(() => { btn.textContent = '完成设置'; btn.style.background = 'var(--pink)'; }, 2500);
+}
+
+// Init
+fetchStatus();
+setInterval(fetchStatus, 5000);
+</script>
+</body>
+</html>
