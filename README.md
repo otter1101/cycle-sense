@@ -305,10 +305,10 @@ PPG 采集 → BPM/RMSSD → FastAPI → SQLite → CycleEngine → Web 看板 /
 
 | 角色 | 成员 |
 |------|------|
-| 产品 + Skill + 前端 + Pitch | 陈映璇 |
-| 后端 + MCP Server | 李欣 |
-| 硬件 | 谢政茹 |
-| 医学验证 | 韦昊 |
+| 产品 + Skill + 前端 + Pitch | cyx |
+| 后端 + MCP Server | lx |
+| 硬件 | xzr |
+| 医学验证+产品辅助 | wh |
 
 ---
 
